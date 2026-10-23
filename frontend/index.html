@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gemini Enterprise Agent Platform — Live Governance, Gateway & Model Armor Demo</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- Top Perimeter Banner (Matches Diagram 2 "Controlled Security Perimeter") -->
+  <header class="top-header" id="cockpitHeader" style="display: none;">
+    <div class="brand-group">
+      <div class="brand-logo" aria-hidden="true">🛡️</div>
+      <div>
+        <h1>Gemini Enterprise Agent Platform</h1>
+        <p class="subtitle">Interactive Demo Cockpit: Agent Registry • Agent Gateway • Model Armor • Controlled Security Perimeter</p>
+      </div>
+    </div>
+
+    <div class="perimeter-badges" aria-label="Controlled Security Perimeter Controls">
+      <span class="perimeter-label">Controlled Security Perimeter:</span>
+      <span class="badge badge-perimeter" title="VPC Service Controls Enforced">🔒 VPC-SC</span>
+      <span class="badge badge-perimeter" title="Customer-Managed Encryption Keys">🔑 CMEK</span>
+      <span class="badge badge-perimeter" title="Data Residency Zones">🌍 DRZ</span>
+      <span class="badge badge-perimeter" title="Access Transparency">👁️ AxT</span>
+      <span class="badge badge-perimeter" title="Cloud IAM">🪪 IAM</span>
+      <span class="badge badge-perimeter" title="Managed Agent Identity">🤖 Agent ID</span>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary btn-sm" id="authenticatedUserBadge" title="Click to switch or sign out of @google.com account">
+        🔐 Sign in (@google.com)
+      </button>
+      <button type="button" class="btn btn-primary" id="openRegisterModalBtn">
+        + Register External 3P Agent (A2A / MCP)
+      </button>
+      <button type="button" class="btn btn-ghost" id="resetDemoBtn" title="Reset all registry entries and Model Armor rules to initial demo state">
+        ↺ Reset Demo
+      </button>
+    </div>
+  </header>
+
+  <main class="cockpit-grid" id="cockpitMain" style="display: none;">
+    <!-- SECTION 1: Interactive Live Architecture Topology (Mirrors Diagram 1 & Diagram 2) -->
+    <section class="card architecture-card" aria-labelledby="archHeading">
+      <div class="card-header">
+        <div>
+          <h2 id="archHeading">High-Level AI Agent Boundary View (Live Telemetry Topology)</h2>
+          <p class="card-sub">Click any guided scenario below to watch live request & policy evaluation hops across Customer-Managed GCP, Google Managed Runtime, Agent Gateway, Model Armor, and 3P External Destinations.</p>
+        </div>
+        <div class="legend-group">
+          <span class="legend-item"><span class="dot dot-idle"></span>Idle</span>
+          <span class="legend-item"><span class="dot dot-allow"></span>Allowed / Verified</span>
+          <span class="legend-item"><span class="dot dot-redact"></span>SDP Redacted</span>
+          <span class="legend-item"><span class="dot dot-block"></span>Blocked by Policy/Armor</span>
+        </div>
+      </div>
+
+      <!-- Controlled Security Perimeter Container -->
+      <div class="perimeter-box">
+        <div class="perimeter-box-title">
+          <span>🟢 Controlled Security Perimeter (VPC-SC Enforced • Does NOT train models on your data, prompts, or outputs)</span>
+          <span id="liveExecutionBanner" class="execution-pill pill-neutral">Ready for Demo Execution</span>
+        </div>
+
+        <div class="topology-columns">
+          <!-- Column 1: Customer Managed GCP Project -->
+          <div class="topo-col topo-col-customer">
+            <div class="col-title" id="cockpitProjectTitle">Customer GCP Project — Enterprise Boundary</div>
+
+            <div class="topo-node" id="node-surface-user">
+              <div class="node-header">
+                <span class="node-icon">💻</span>
+                <strong>Users & Surfaces (TLS)</strong>
+                <span class="node-status-badge" id="badge-surface-user">TLS 1.3</span>
+              </div>
+              <p class="node-desc">Workspace • AGY • Enterprise Web App</p>
+            </div>
+
+            <div class="topo-arrow">↓</div>
+
+            <div class="topo-node" id="node-your-agents">
+              <div class="node-header">
+                <span class="node-icon">🧑‍✈️</span>
+                <strong>Your Agents (Each Isolated)</strong>
+                <span class="node-status-badge" id="badge-your-agents">PERSONAL</span>
+              </div>
+              <p class="node-desc">Personal agents (user OAuth) vs. Co-worker agents (managed Agent ID)</p>
+              <div class="persona-switcher" role="group" aria-label="Switch Agent Identity Persona">
+                <button type="button" class="persona-btn active" id="personaPersonalBtn" data-mode="PERSONAL">
+                  👤 Personal (analyst@example.com)
+                </button>
+                <button type="button" class="persona-btn" id="personaCoworkerBtn" data-mode="COWORKER">
+                  🤖 Co-Worker (finance-coworker-agent SA)
+                </button>
+              </div>
+            </div>
+
+            <div class="topo-arrow">↕ <small>tools • skills • policies</small></div>
+
+            <div class="topo-node" id="node-agent-registry">
+              <div class="node-header">
+                <span class="node-icon">🗂️</span>
+                <strong>Agent Registry</strong>
+                <span class="node-status-badge" id="badge-agent-registry">Hub</span>
+              </div>
+              <p class="node-desc">Central hub for 1P (ADK) & 3P (A2A) agents • Skills • MCP Connectors (Workspace, M365, Jira, BigQuery)</p>
+              <div id="miniRegistryPills" class="mini-pills"></div>
+            </div>
+          </div>
+
+          <!-- Column 2: Google Managed Runtime -->
+          <div class="topo-col topo-col-google">
+            <div class="col-title">Google Managed Runtime</div>
+
+            <div class="topo-node" id="node-agent-sandbox">
+              <div class="node-header">
+                <span class="node-icon">📦</span>
+                <strong>Agent Sandbox</strong>
+                <span class="node-status-badge" id="badge-agent-sandbox">Isolated</span>
+              </div>
+              <p class="node-desc">code • shell • files (No direct internet; egress via Gateway only)</p>
+            </div>
+
+            <div class="topo-arrow">↕</div>
+
+            <div class="topo-node" id="node-agent-harness">
+              <div class="node-header">
+                <span class="node-icon">⚙️</span>
+                <strong>Agent Harness (ADK)</strong>
+                <span class="node-status-badge" id="badge-agent-harness">Active</span>
+              </div>
+              <p class="node-desc">Plans & runs agent tasks • tools • skills</p>
+            </div>
+
+            <div class="topo-arrow">↕ <small>harness-only access</small></div>
+
+            <div class="topo-node" id="node-agent-context">
+              <div class="node-header">
+                <span class="node-icon">🗄️</span>
+                <strong>Agent Context Resources</strong>
+                <span class="node-status-badge" id="badge-agent-context">CMEK</span>
+              </div>
+              <p class="node-desc">Memory Bank • Artifact Storage (GCS per-task folders, isolated per agent)</p>
+            </div>
+
+            <div class="topo-arrow">↕</div>
+
+            <div class="topo-node" id="node-google-apis-vpc-sc">
+              <div class="node-header">
+                <span class="node-icon">☁️</span>
+                <strong>Google APIs (VPC-SC Enforced)</strong>
+                <span class="node-status-badge" id="badge-google-apis-vpc-sc">1P MCP</span>
+              </div>
+              <p class="node-desc">Workspace MCP* • Cloud Storage • BigQuery • Gemini</p>
+            </div>
+          </div>
+
+          <!-- Column 3: Agent Gateway & Model Armor -->
+          <div class="topo-col topo-col-gateway">
+            <div class="col-title">Agent Gateway (Policy Enforcement Choke Point)</div>
+
+            <div class="topo-node" id="node-agent-gateway">
+              <div class="node-header">
+                <span class="node-icon">⛩️</span>
+                <strong>Agent Gateway PDPs</strong>
+                <span class="node-status-badge" id="badge-agent-gateway">Enforcing</span>
+              </div>
+              <ul class="gateway-guarantees">
+                <li>✔ Every agent call is authorized & policy-checked (IAP • Workspace • Registry)</li>
+                <li>✔ <strong>Tools do NOT get raw user credentials</strong> (Token Broker)</li>
+                <li>✔ Internet & 3P tools are <strong>OFF by default</strong> inside VPC-SC</li>
+              </ul>
+            </div>
+
+            <div class="topo-arrow">↕ <small>Inspect Prompt • Tool • A2A • Response</small></div>
+
+            <div class="topo-node" id="node-model-armor">
+              <div class="node-header">
+                <span class="node-icon">🛡️</span>
+                <strong>Model Armor (Guardrails)</strong>
+                <span class="node-status-badge" id="badge-model-armor">STRICT_SDP</span>
+              </div>
+              <p class="node-desc">Protects: <strong>Models • MCP • Tools • Agents</strong></p>
+              <div id="miniArmorPills" class="mini-pills"></div>
+            </div>
+
+            <div class="topo-arrow">↓ <small>Outbound only • via your VPC (PSC-I)</small></div>
+
+            <div class="topo-node topo-node-external" id="node-external-3p">
+              <div class="node-header">
+                <span class="node-icon">🌐</span>
+                <strong>External Destinations (3P A2A & MCP)</strong>
+                <span class="node-status-badge" id="badge-external-3p">PSC-I</span>
+              </div>
+              <p class="node-desc">Anthropic Claude (A2A) • Microsoft Copilot Studio (A2A) • 3P Jira MCP Server</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: Left/Middle Control Column — Guided Scenarios + Agent Registry + Model Armor -->
+    <div class="controls-column">
+      <!-- Guided Demo Scenarios (Covers Use Cases 1, 2, 3 + Flows 4, 5, 6, 7, 8, 9) -->
+      <section class="card" aria-labelledby="scenariosHeading">
+        <div class="card-header">
+          <div>
+            <h2 id="scenariosHeading">🎬 Live Demo Storyboard (1-Click Scenarios)</h2>
+            <p class="card-sub">Select any use case below to execute the flow through the Agent Gateway, or customize the prompt and targets.</p>
+          </div>
+        </div>
+
+        <div class="scenario-grid" id="scenarioButtonsContainer">
+          <!-- Populated by app.js -->
+        </div>
+
+        <!-- Interactive Custom Prompt & Target Runner -->
+        <div class="custom-runner">
+          <div class="runner-row">
+            <label for="customPromptInput" class="runner-label">Active Prompt / Task Payload:</label>
+            <span id="activeScenarioTag" class="badge badge-info">Scenario 1</span>
+          </div>
+          <textarea id="customPromptInput" rows="3" placeholder="Enter a prompt or select a scenario above..."></textarea>
+          <div class="runner-controls">
+            <div class="target-checkboxes" id="targetCheckboxes">
+              <!-- Populated by app.js -->
+            </div>
+            <button type="button" class="btn btn-accent" id="executeFlowBtn">
+              ▶ Run Through Agent Gateway
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Two-Column Sub-Grid for Use Case 1/2 (Agent Registry) and Use Case 3 (Model Armor) -->
+      <div class="sub-controls-grid">
+        <!-- Use Case 1 & 2: Agent Registry & Agent Gateway Control Plane -->
+        <section class="card" aria-labelledby="registryHeading">
+          <div class="card-header">
+            <div>
+              <h2 id="registryHeading">1 & 2. Agent Registry & Gateway Routes</h2>
+              <p class="card-sub">Register 3P agents (Anthropic, MS Copilot), inspect A2A <code>.well-known/agent.json</code> cards, and toggle Gateway & PSC-I egress.</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" id="quickRegisterCopilotBtn">
+              ⚡ 1-Click Onboard MS Copilot
+            </button>
+          </div>
+          <div class="registry-list" id="registryListContainer">
+            <!-- Populated by app.js -->
+          </div>
+        </section>
+
+        <!-- Use Case 3: Model Armor Live Configuration -->
+        <section class="card" aria-labelledby="armorHeading">
+          <div class="card-header">
+            <div>
+              <h2 id="armorHeading">3. Model Armor Guardrail Configuration</h2>
+              <p class="card-sub">Toggle Model Armor On/Off or switch templates in real time at the Agent Gateway PDP.</p>
+            </div>
+          </div>
+
+          <div class="preset-bar" role="group" aria-label="Model Armor Presets">
+            <button type="button" class="preset-btn" data-preset="OFF">🔴 OFF (Bypass)</button>
+            <button type="button" class="preset-btn" data-preset="STANDARD_GUARDRAILS">🟡 Standard Safety</button>
+            <button type="button" class="preset-btn active" data-preset="STRICT_ENTERPRISE_SDP">🟢 Strict + SDP (Redact)</button>
+            <button type="button" class="preset-btn" data-preset="STRICT_BLOCK_SDP">🛑 Strict + SDP (Block)</button>
+          </div>
+
+          <div class="armor-toggles" id="armorTogglesContainer">
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleArmorEnabled" checked />
+              <span><strong>Model Armor PDP Enabled</strong> (Master switch at Agent Gateway)</span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="togglePiJailbreak" checked />
+              <span><strong>Direct Prompt Injection & Jailbreak</strong> (<code>sanitizeUserPrompt</code>)</span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleIndirectPi" checked />
+              <span><strong>Indirect Prompt Injection on 3P MCP / A2A Outputs</strong> (<code>sanitizeModelResponse</code>)</span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleSdp" checked />
+              <span><strong>Sensitive Data Protection (SDP / DLP)</strong> (SSN, Credit Cards, API Keys on A2A egress)</span>
+            </label>
+            <div class="sub-select-row">
+              <label for="sdpActionSelect">SDP Action on Outbound 3P A2A:</label>
+              <select id="sdpActionSelect">
+                <option value="REDACT">REDACT (De-identify inline & allow task)</option>
+                <option value="BLOCK">BLOCK (Terminate outbound 3P call)</option>
+              </select>
+            </div>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleMaliciousUri" checked />
+              <span><strong>Malicious URI & Exfiltration Webhook Filter</strong></span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggleRai" checked />
+              <span><strong>Responsible AI (Dangerous Content / Cyberattack Filter)</strong></span>
+            </label>
+            <hr class="divider" />
+            <label class="toggle-row poison-toggle">
+              <input type="checkbox" id="toggleJiraPoison" checked />
+              <span>🧪 <strong>Red-Team Toggle:</strong> Inject Poisoned Prompt in 3P Jira MCP Ticket (<code>SEC-4092</code>)</span>
+            </label>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Right Telemetry & Observability Column (Glass-Box Trace + 3P Header Inspector) -->
+    <aside class="telemetry-column">
+      <section class="card trace-card" aria-labelledby="traceHeading">
+        <div class="card-header">
+          <div>
+            <h2 id="traceHeading">🔍 Live Governance & Policy Trace</h2>
+            <p class="card-sub">End-to-end hop inspection across Identity, Registry, Gateway PDP, and Model Armor.</p>
+          </div>
+        </div>
+
+        <div id="finalOutputBox" class="final-output-box">
+          Select any scenario on the left or click <strong>"▶ Run Through Agent Gateway"</strong> to inspect the live execution trace.
+        </div>
+
+        <div id="traceHopsContainer" class="trace-hops-list">
+          <!-- Populated by app.js -->
+        </div>
+      </section>
+
+      <section class="card inspector-card" aria-labelledby="inspectorHeading">
+        <div class="card-header">
+          <div>
+            <h2 id="inspectorHeading">🕵️ 3P External Agent Header & Payload Inspector</h2>
+            <p class="card-sub">What Anthropic Claude & Microsoft Copilot actually received across the boundary (proves Zero Raw User Credential Leakage & Outbound DLP).</p>
+          </div>
+        </div>
+        <div id="thirdPartyInspectorContainer" class="inspector-list">
+          <p class="empty-hint">No outbound 3P A2A calls recorded yet. Run Scenario 1, 4, or 6 to inspect brokered headers and redacted payloads.</p>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Modal Dialog for Registering External 3P Agent / Viewing A2A AgentCard -->
+  <!-- Follows modern-web-guidance `light-dismiss-a-dialog`: closedby="any" + showModal() + Safari click fallback -->
+  <dialog id="registerAgentDialog" closedby="any" aria-labelledby="registerDialogTitle">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 id="registerDialogTitle">Register External 3P Agent in Agent Registry</h2>
+        <button type="button" class="btn btn-ghost btn-sm" id="closeDialogBtn" aria-label="Close dialog">✕</button>
+      </div>
+
+      <p class="dialog-lead">
+        Onboard an external 3P agent (Microsoft Copilot Studio, Anthropic Claude, OpenAI, or custom MCP server) by importing its <strong>A2A AgentCard (<code>.well-known/agent.json</code>)</strong> and binding it to a managed <code>Agent ID</code>.
+      </p>
+
+      <div class="preset-import-bar">
+        <span>Quick Fill Template:</span>
+        <button type="button" class="btn btn-sm btn-secondary" id="fillCopilotTemplateBtn">Microsoft Copilot Studio (M365 A2A)</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="fillAnthropicTemplateBtn">Anthropic Claude 3.7 (Compliance A2A)</button>
+        <button type="button" class="btn btn-sm btn-secondary" id="fillCustomMcpTemplateBtn">ServiceNow / Custom 3P MCP</button>
+      </div>
+
+      <form id="registerAgentForm" method="dialog">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="regAgentId">Registry ID</label>
+            <input type="text" id="regAgentId" required value="ms-copilot-m365-assistant" />
+          </div>
+          <div class="form-field">
+            <label for="regProvider">3P Provider / Platform</label>
+            <input type="text" id="regProvider" required value="Microsoft Copilot Studio (A2A Bridge)" />
+          </div>
+          <div class="form-field">
+            <label for="regName">Agent Display Name</label>
+            <input type="text" id="regName" required value="Microsoft Copilot Studio (M365 & SharePoint Agent)" />
+          </div>
+          <div class="form-field">
+            <label for="regProtocol">Protocol</label>
+            <select id="regProtocol">
+              <option value="A2A">A2A (Agent2Agent Protocol 1.0)</option>
+              <option value="MCP">MCP (Model Context Protocol)</option>
+            </select>
+          </div>
+          <div class="form-field full-width">
+            <label for="regWellKnownUrl">A2A AgentCard Discovery URL (<code>.well-known/agent.json</code>)</label>
+            <div class="input-with-btn">
+              <input type="url" id="regWellKnownUrl" value="http://127.0.0.1:8080/a2a/copilot/.well-known/agent.json" />
+              <button type="button" class="btn btn-sm btn-secondary" id="fetchAgentCardBtn">Fetch Live AgentCard</button>
+            </div>
+          </div>
+          <div class="form-field full-width">
+            <label for="regEndpointUrl">Runtime Task Endpoint URL (Routed via Agent Gateway PSC-I)</label>
+            <input type="url" id="regEndpointUrl" required value="http://127.0.0.1:8080/a2a/copilot/tasks/send" />
+          </div>
+          <div class="form-field full-width">
+            <label for="regDesc">Description & Governance Scope</label>
+            <textarea id="regDesc" rows="2">External 3P Microsoft Copilot agent for M365 Teams/SharePoint knowledge lookup and IT helpdesk automation.</textarea>
+          </div>
+        </div>
+
+        <div class="form-checkboxes">
+          <label class="toggle-row">
+            <input type="checkbox" id="regGatewayEnabled" checked />
+            <span><strong>Enable Route on Agent Gateway</strong> (Allow ADK Orchestrator to invoke this agent)</span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="regPscApproved" checked />
+            <span><strong>Approve Outbound VPC-SC / PSC-I Egress Route</strong></span>
+          </label>
+        </div>
+
+        <div class="agent-card-preview-box">
+          <div class="preview-header">
+            <strong>Live A2A <code>.well-known/agent.json</code> Manifest Preview:</strong>
+          </div>
+          <pre id="agentCardJsonPreview" class="code-preview"></pre>
+        </div>
+
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-ghost" id="cancelDialogBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submitRegisterAgentBtn">✓ Register in Agent Registry & Bind Agent ID</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Google Account (@google.com ONLY) Cryptographic OAuth 2.0 Login Gate Dialog -->
+  <dialog id="googleSignInDialog" closedby="none" aria-labelledby="googleSignInTitle">
+    <div class="dialog-content" style="max-width: 460px;">
+      <div class="dialog-header">
+        <h2 id="googleSignInTitle">🔐 Sign in with Google Account</h2>
+      </div>
+      <p class="dialog-lead">
+        Access to this <strong>Gemini Enterprise Agent Platform</strong> demo environment requires cryptographic Google OAuth 2.0 authentication and is restricted to authorized enterprise corporate accounts.
+      </p>
+
+      <div id="gsiButtonContainer" style="margin-bottom: 12px;"></div>
+
+      <div style="margin-top: 16px;">
+        <button
+          type="button"
+          id="firebaseGoogleSignInBtn"
+          class="btn btn-primary"
+          style="width: 100%; justify-content: center; gap: 10px; padding: 12px 16px; font-size: 14px;"
+        >
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+            <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+          </svg>
+          <span>Sign in with Enterprise Google Account</span>
+        </button>
+      </div>
+
+      <p id="googleLoginError" style="color: #f87171; font-size: 12px; margin-top: 12px; display: none;"></p>
+    </div>
+  </dialog>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
